@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Inven Farmer</title>
+    <script>
+      function login() {
+        preload.login()
+      }
+      function logout() {
+        preload.logout()
+      }
+      function run_macro() {
+        preload.run_macro()
+      }
+    </script>
+  </head>
+  <body>
+    <div>
+      <button onclick="login()">login</button>
+      <button onclick="logout()">logout</button>
+      <button onclick="run_macro()">run_macro</button>
+    </div>
+    <div>
+      <label for="inven_list">Scan list:</label>
+      <textarea id="inven_list" rows="5" cols="33">2631bbs asusrog gfn intel it msi r2 webzine zotac</textarea>
+    </div>
+    <div>
+      <label for="exp_log">Exp log:</label>
+      <textarea id="exp_log" rows="5" cols="33"></textarea>
+    </div>
+  </body>
+</html>
