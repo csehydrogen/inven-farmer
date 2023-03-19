@@ -1,5 +1,30 @@
-const { app, BrowserWindow, BrowserView, ipcMain, ipcRenderer } = require('electron')
+const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path')
+
+console.log(process.argv)
+
+if (handleSquirrelEvent()) {
+  return;
+}
+
+function handleSquirrelEvent() {
+  if (process.argv.length === 1) {
+    return false;
+  }
+  const squirrelEvent = process.argv[1];
+  switch (squirrelEvent) {
+    case '--squirrel-install':
+    case '--squirrel-updated':
+      setTimeout(app.quit, 1000);
+      return true;
+    case '--squirrel-uninstall':
+      setTimeout(app.quit, 1000);
+      return true;
+    case '--squirrel-obsolete':
+      app.quit();
+      return true;
+  }
+};
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -7,6 +32,16 @@ function sleep(ms) {
 
 function sample(arr){
   return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function createSlaveWindow() {
+  return new BrowserWindow({
+    width: 600,
+    height: 400,
+    webPreferences: {
+      preload: path.join(__dirname, 'slave_preload.js'),
+    },
+  })
 }
 
 const createWindow = () => {
@@ -17,13 +52,7 @@ const createWindow = () => {
       preload: path.join(__dirname, 'master_preload.js'),
     },
   })
-  const slave_window = new BrowserWindow({
-    width: 600,
-    height: 400,
-    webPreferences: {
-      preload: path.join(__dirname, 'slave_preload.js'),
-    },
-  })
+  slave_window = createSlaveWindow()
   master_window.loadFile('index.html')
   slave_window.loadURL('https://inven.co.kr')
   if (!app.isPackaged) {
@@ -31,30 +60,38 @@ const createWindow = () => {
     slave_window.openDevTools();
   }
   ipcMain.handle('login', () => {
+    if (slave_window.isDestroyed()) {
+      slave_window = createSlaveWindow()
+    }
     slave_window.loadURL('https://member.inven.co.kr/user/scorpio/mlogin')
   });
   ipcMain.handle('logout', () => {
+    if (slave_window.isDestroyed()) {
+      slave_window = createSlaveWindow()
+    }
     slave_window.loadURL('https://member.inven.co.kr/user/scorpio/logout')
   });
 
   ipcMain.handle('run_macro', async () => {
+    if (slave_window.isDestroyed()) {
+      slave_window = createSlaveWindow()
+    }
     inven_list = await master_window.webContents.executeJavaScript("document.getElementById('inven_list').value.trim().split(/\\s+/)");
-    console.log(inven_list, typeof(inven_list))
 
     pre_exp = await slave_window.loadURL('https://www.inven.co.kr/member/skill/').then(
       () => slave_window.webContents.executeJavaScript('preload.get_exp()')
-    ).catch(console.log);
+    ).catch(() => -1);
     console.log('pre_exp: ' + pre_exp)
     if (pre_exp < 0) {
       return;
     }
 
     while (true) {
-      await sleep(1000);
+      await sleep(2000);
       inven = sample(inven_list);
       device = sample(['inven', 'minven'])
       url = 'https://zicf.inven.co.kr/RealMedia/ads/adstream_sx.ads/' + device + '/' + inven;
-      console.log('Main: %s', url);
+      master_window.webContents.send('update_last_scan', [url])
 
       adlink = await slave_window.loadURL(url).then(() => 
         slave_window.webContents.executeJavaScript('preload.get_adlink()')
@@ -68,15 +105,14 @@ const createWindow = () => {
         slave_window.loadURL('https://www.inven.co.kr/member/skill/')
       ).then(() =>
         slave_window.webContents.executeJavaScript('preload.get_exp()')
-      ).catch(() => null)
+      ).catch(() => -1)
 
-      console.log('exp: ' + exp)
       if (exp < 0) {
-        return;
+        continue;
       }
 
       if (pre_exp < exp) {
-        master_window.webContents.send('append_exp_log', [pre_exp, exp])
+        master_window.webContents.send('update_last_exp', [pre_exp, exp, adlink])
       }
       pre_exp = exp;
     }

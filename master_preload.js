@@ -7,11 +7,18 @@ contextBridge.exposeInMainWorld('preload', {
 })
 
 window.addEventListener('DOMContentLoaded', () => {
-  const exp_log = document.getElementById('exp_log')
-  ipcRenderer.on('append_exp_log', (_event, data) => {
+  const last_scan = document.getElementById('last_scan');
+  const last_exp = document.getElementById('last_exp');
+  ipcRenderer.on('update_last_scan', (_event, data) => {
+    url = data[0]
+    line = new Date().toLocaleString('ko-KR') + ' @ ' + url
+    last_scan.textContent = line
+  })
+  ipcRenderer.on('update_last_exp', (_event, data) => {
     pre_exp = data[0]
     exp = data[1]
-    line = new Date().toLocaleString('ko-KR') + ' ' + pre_exp + ' -> ' + exp + '\n'
-    exp_log.value += line
+    adlink = data[2]
+    line = new Date().toLocaleString('ko-KR') + ' : ' + pre_exp + ' -> ' + exp + ' @ ' + adlink
+    last_exp.textContent = line
   })
 })

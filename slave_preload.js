@@ -30,11 +30,9 @@ function get_adlink() {
     return null
   }
   toks = adlink.split('/')
-  console.log(toks);
   for (var i of [6, 7, 8, 9, 10, 14]) {
     toks[i] = '0';
   }
-  console.log(toks);
   adlink = toks.join('/');
   console.log('Case 1: %s', adlink);
   return adlink;
