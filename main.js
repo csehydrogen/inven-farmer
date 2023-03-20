@@ -1,7 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path')
-
-console.log(process.argv)
+const INTERVAL = 2000;
 
 if (handleSquirrelEvent()) {
   return;
@@ -78,6 +77,7 @@ const createWindow = () => {
     }
     inven_list = await master_window.webContents.executeJavaScript("document.getElementById('inven_list').value.trim().split(/\\s+/)");
 
+    await sleep(INTERVAL);
     pre_exp = await slave_window.loadURL('https://www.inven.co.kr/member/skill/').then(
       () => slave_window.webContents.executeJavaScript('preload.get_exp()')
     ).catch(() => -1);
@@ -86,13 +86,45 @@ const createWindow = () => {
       return;
     }
 
-    while (true) {
-      await sleep(2000);
+    for (iter=0; ; iter++) {
+      if (iter % 1000 == 0) {
+        // imarble
+        for (i=0; i<6; i++) {
+          await sleep(INTERVAL);
+          await slave_window.loadURL("https://imart.inven.co.kr/imarble/index.php", {
+            postData: [{
+              type: 'rawData',
+              bytes: Buffer.from('mode=playGame')
+            }],
+            extraHeaders: 'Content-Type: application/x-www-form-urlencoded'
+          }).catch(() => null)
+          master_window.webContents.send('update_text_content', ['imarble', 'done'])
+        }
+
+        // attendence
+        var d = new Date();
+        var yyyymm = [
+          d.getFullYear(),
+          ('0' + (d.getMonth() + 1)).slice(-2),
+        ].join('');
+        await sleep(INTERVAL);
+        res = await slave_window.loadURL("https://imart.inven.co.kr/attendance/attend_apply.ajax.php", {
+          postData: [{
+            type: 'rawData',
+            bytes: Buffer.from('attendCode='+yyyymm)
+          }],
+          extraHeaders: 'Content-Type: application/x-www-form-urlencoded',
+          httpReferrer: 'https://imart.inven.co.kr/attendance/',
+        }).catch(() => null);
+        master_window.webContents.send('update_text_content', ['attendance', 'done'])
+      }
+
       inven = sample(inven_list);
       device = sample(['inven', 'minven'])
       url = 'https://zicf.inven.co.kr/RealMedia/ads/adstream_sx.ads/' + device + '/' + inven;
       master_window.webContents.send('update_last_scan', [url])
 
+      await sleep(INTERVAL);
       adlink = await slave_window.loadURL(url).then(() => 
         slave_window.webContents.executeJavaScript('preload.get_adlink()')
       ).catch(() => null)
@@ -101,9 +133,11 @@ const createWindow = () => {
         continue;
       }
 
-      exp = await slave_window.loadURL(adlink).then(() => 
+      await sleep(INTERVAL);
+      exp = await slave_window.loadURL(adlink).then(async () => {
+        await sleep(INTERVAL);
         slave_window.loadURL('https://www.inven.co.kr/member/skill/')
-      ).then(() =>
+      }).then(() =>
         slave_window.webContents.executeJavaScript('preload.get_exp()')
       ).catch(() => -1)
 
@@ -116,6 +150,10 @@ const createWindow = () => {
       }
       pre_exp = exp;
     }
+  });
+
+  ipcMain.handle('test', async () => {
+    return;
   });
 }
 

@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('preload', {
   login: () => ipcRenderer.invoke('login'),
   logout: () => ipcRenderer.invoke('logout'),
   run_macro: () => ipcRenderer.invoke('run_macro'),
+  test: () => ipcRenderer.invoke('test'),
 })
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -20,5 +21,10 @@ window.addEventListener('DOMContentLoaded', () => {
     adlink = data[2]
     line = new Date().toLocaleString('ko-KR') + ' : ' + pre_exp + ' -> ' + exp + ' @ ' + adlink
     last_exp.textContent = line
+  })
+  ipcRenderer.on('update_text_content', async (_event, data) => {
+    id = data[0]
+    str = data[1] + ' @ ' + new Date().toLocaleString('ko-KR')
+    document.getElementById(id).textContent = str
   })
 })

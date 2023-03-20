@@ -13,6 +13,9 @@
       function run_macro() {
         preload.run_macro()
       }
+      function test() {
+        preload.test()
+      }
     </script>
   </head>
   <body>
@@ -20,6 +23,7 @@
       <button onclick="login()">login</button>
       <button onclick="logout()">logout</button>
       <button onclick="run_macro()">run_macro</button>
+      <button onclick="test()">test</button>
     </div>
     <div>
       <label for="inven_list">Scan list:</label>
@@ -30,6 +34,12 @@
     </div>
     <div>
       Last exp: <span id="last_exp"></span>
+    </div>
+    <div>
+      imarble: <span id="imarble"></span>
+    </div>
+    <div>
+      attendance: <span id="attendance"></span>
     </div>
   </body>
 </html>
