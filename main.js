@@ -33,6 +33,15 @@ function sample(arr){
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
+function ascii_to_hexa(str) {
+  var arr1 = [];
+  for (var n = 0, l = str.length; n < l; n++) {
+    var hex = Number(str.charCodeAt(n)).toString(16);
+    arr1.push(hex);
+  }
+  return arr1.join('');
+}
+
 function createSlaveWindow() {
   return new BrowserWindow({
     width: 600,
@@ -43,8 +52,22 @@ function createSlaveWindow() {
   })
 }
 
+async function login() {
+  username = await master_window.webContents.executeJavaScript("document.getElementById('username').value");
+  pass = await master_window.webContents.executeJavaScript("document.getElementById('pass').value");
+
+  // kp: keep logged in
+  await slave_window.loadURL("https://member.inven.co.kr/m/login/dispatch", {
+    postData: [{
+      type: 'rawData',
+      bytes: Buffer.from("user_id="+username+"&password="+ascii_to_hexa(pass)+"&kp=1")
+    }],
+    extraHeaders: 'Content-Type: application/x-www-form-urlencoded',
+  }).catch(() => null);
+}
+
 const createWindow = () => {
-  const master_window = new BrowserWindow({
+  master_window = new BrowserWindow({
     width: 400,
     height: 300,
     webPreferences: {
@@ -58,11 +81,11 @@ const createWindow = () => {
     master_window.openDevTools();
     slave_window.openDevTools();
   }
-  ipcMain.handle('login', () => {
+  ipcMain.handle('login', async () => {
     if (slave_window.isDestroyed()) {
       slave_window = createSlaveWindow()
     }
-    slave_window.loadURL('https://member.inven.co.kr/user/scorpio/mlogin')
+    await login()
   });
   ipcMain.handle('logout', () => {
     if (slave_window.isDestroyed()) {
@@ -108,7 +131,7 @@ const createWindow = () => {
           ('0' + (d.getMonth() + 1)).slice(-2),
         ].join('');
         await sleep(INTERVAL);
-        res = await slave_window.loadURL("https://imart.inven.co.kr/attendance/attend_apply.ajax.php", {
+        await slave_window.loadURL("https://imart.inven.co.kr/attendance/attend_apply.ajax.php", {
           postData: [{
             type: 'rawData',
             bytes: Buffer.from('attendCode='+yyyymm)
@@ -117,6 +140,21 @@ const createWindow = () => {
           httpReferrer: 'https://imart.inven.co.kr/attendance/',
         }).catch(() => null);
         master_window.webContents.send('update_text_content', ['attendance', 'done'])
+
+        // fire income
+        // fire income only works right after re-initiating login,
+        // even if user is login-ed and other functions are working
+        await login()
+        // then get fire income
+        await sleep(INTERVAL);
+        await slave_window.loadURL("https://member.inven.co.kr/user/scorpio/chk/skill/point", {
+          postData: [{
+            type: 'rawData',
+            bytes: Buffer.from("surl=https%3A%2F%2Fwww.inven.co.kr%2F")
+          }],
+          extraHeaders: 'Content-Type: application/x-www-form-urlencoded',
+        }).catch(() => null);
+        master_window.webContents.send('update_text_content', ['fire_income', 'done'])
       }
 
       inven = sample(inven_list);
