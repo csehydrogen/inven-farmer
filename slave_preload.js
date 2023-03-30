@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('preload', {
   get_exp: get_exp,
   get_adlink: get_adlink,
   find_dom_by_xpath: find_dom_by_xpath,
+  brand_subscribe: brand_subscribe,
+  brand_like: brand_like,
 })
 
 function find_dom_by_xpath(xpath) {
@@ -36,4 +38,18 @@ function get_adlink() {
   adlink = toks.join('/');
   console.log('Case 1: %s', adlink);
   return adlink;
+}
+
+function brand_subscribe(sitecode) {
+  return fetch("https://www.inven.co.kr/common/module/brand/channel.php?mode=subscribe&subscribe_state=1&sitecode="+sitecode, {
+    "method": "GET",
+    "credentials": "include"
+  });
+}
+
+function brand_like(sitecode) {
+  return fetch("https://www.inven.co.kr/common/module/brand/channel.php?mode=like&sitecode="+sitecode, {
+    "method": "GET",
+    "credentials": "include"
+  });
 }

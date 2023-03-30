@@ -99,6 +99,7 @@ const createWindow = () => {
       slave_window = createSlaveWindow()
     }
     inven_list = await master_window.webContents.executeJavaScript("document.getElementById('inven_list').value.trim().split(/\\s+/)");
+    brand_list = await master_window.webContents.executeJavaScript("document.getElementById('brand_list').value.trim().split(/\\s+/)"); 
 
     await sleep(INTERVAL);
     pre_exp = await slave_window.loadURL('https://www.inven.co.kr/member/skill/').then(
@@ -155,6 +156,20 @@ const createWindow = () => {
           extraHeaders: 'Content-Type: application/x-www-form-urlencoded',
         }).catch(() => null);
         master_window.webContents.send('update_text_content', ['fire_income', 'done'])
+
+        // brand
+        for (var brand of brand_list) {
+          let brand_url = "https://" + brand + ".inven.co.kr/";
+          await sleep(INTERVAL);
+          await slave_window.loadURL(brand_url).catch(() => null);
+          sitecode = await slave_window.webContents.executeJavaScript("Brand.Subscribe.Core.sitecode()").catch(() => 0); 
+          await sleep(INTERVAL);
+          await slave_window.webContents.executeJavaScript('preload.brand_subscribe('+sitecode+')').catch(() => null)
+          for (let i = 0; i < 3; i++) {
+            await sleep(INTERVAL);
+            await slave_window.webContents.executeJavaScript('preload.brand_like('+sitecode+')').catch(() => null)
+          }
+        }
       }
 
       inven = sample(inven_list);
